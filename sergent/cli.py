@@ -58,10 +58,13 @@ class Cli(object):
                 count_instance = 1
                 for instance in instances:
                     click.echo('%s) %s - %s' % (count_instance,
-                                                     instance.id,
-                                                     instance.private_ip_address))
+                                                instance.id,
+                                                instance.private_ip_address))
                     count_instance += 1
                 choosen_one = int(click.prompt('Please choose an instance', type=int))
+                if choosen_one < 1 or choosen_one > len(instances):
+                    raise UsageError('You have to choose a correct instance'
+                                     ' between %s and %s' % (1, len(instances)))
             else:
                 choosen_one = 1
 
