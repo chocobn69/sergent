@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+# main sergent cli
+#
+import sys
+from sergent.cli import Cli
+
+
+def main():
+    cli = Cli()
+    cli.go()
+
+if __name__ == '__main__':
+    sys.exit(main())
