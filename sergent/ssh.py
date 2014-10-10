@@ -2,6 +2,7 @@
 
 from boto import ec2
 from boto.exception import NoAuthHandlerFound
+import os
 
 
 class SergentSshException(Exception):
@@ -15,7 +16,10 @@ class SergentSsh(object):
     _aws_access_key_id = None
     _aws_secret_access_key = None
 
-    def __init__(self, aws_access_key_id, aws_secret_access_key, region='us-east-1', using_vpn=False, key_path='.ssh/'):
+    def __init__(self, aws_access_key_id, aws_secret_access_key,
+                 region='us-east-1',
+                 using_vpn=False,
+                 key_path=os.getenv('HOME') + '/.ssh/'):
         """
         :param region: region used
         :param using_vpn: boolean determinig if we want to use private (True) or public (False) ip
@@ -111,7 +115,7 @@ class SergentSsh(object):
 
     def contruct_ssh_str(self, instance, ssh_user, ssh_port):
         key_name = SergentSsh.get_key_name(instance)
-        if self._using_vpn:
+        if self._using_vpn is True:
             ssh_ip = instance.private_ip_address
         else:
             ssh_ip = instance.ip_address
