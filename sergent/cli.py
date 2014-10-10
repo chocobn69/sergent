@@ -71,8 +71,12 @@ class Cli(object):
                 if choosen_one < 0 or choosen_one > len(instances):
                     raise UsageError('You have to choose a correct instance'
                                      ' between %s and %s' % (1, len(instances)))
-            else:
+            # if we have one instance only
+            elif len(instances) == 1:
                 choosen_one = 1
+            # if we have no instance at all
+            else:
+                raise UsageError('Tag(s) %s not found' % (tags, ))
 
             if choosen_one == 0:
                 sys.exit(0)
