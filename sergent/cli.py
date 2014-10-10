@@ -5,6 +5,7 @@ from ssh import SergentSsh, SergentSshException
 import ConfigParser
 import logging
 import os
+import sys
 
 
 class SergentCliException(Exception):
@@ -17,9 +18,11 @@ class Cli(object):
     @click.command()
     @click.option('--tags', '-t', multiple=True, help='tags where you want to connect to (tagname=value) '
                                                       'separated by spaces')
-    @click.option('--configfile', '-c', default='.sergent', help='config file for sergent')
-    @click.option('--configsection', '-s', default='sergent', help='config section in config file for sergent')
-    @click.option('--debug/--no-debug', default=False, help='turn on debug')
+    @click.option('--configfile', '-c', default=os.getenv('HOME') + '/.sergent', help='config file for sergent '
+                                                                                   '(default ~/.sergent)')
+    @click.option('--configsection', '-s', default='sergent', help='config section in config file for sergent'
+                                                                   ' (default sergent)')
+    @click.option('--debug/--no-debug', default=False, help='turn on debug (default False)')
     def go(tags, configfile, configsection, debug):
 
         # turn on debug mode (mainly for boto)
@@ -43,8 +46,10 @@ class Cli(object):
             tag_ssh_port = config.get(configsection, 'tag_ssh_port')
             key_path = config.get(configsection, 'key_path')
             using_vpn = config.get(configsection, 'using_vpn')
-        except Exception as e:
+        except IOError:
             raise UsageError('%s config file not found' % configfile)
+        except ConfigParser.NoSectionError:
+            raise UsageError('section %s not found in config file %s' % (configsection, configfile))
 
         # now we can try to connect
         try:
@@ -56,17 +61,21 @@ class Cli(object):
             # if we have more than one instance, we need to make a choice
             if len(instances) > 1:
                 count_instance = 1
+                click.echo('0) None, I will filter more')
                 for instance in instances:
                     click.echo('%s) %s - %s' % (count_instance,
                                                 instance.id,
                                                 instance.private_ip_address))
                     count_instance += 1
                 choosen_one = int(click.prompt('Please choose an instance', type=int))
-                if choosen_one < 1 or choosen_one > len(instances):
+                if choosen_one < 0 or choosen_one > len(instances):
                     raise UsageError('You have to choose a correct instance'
                                      ' between %s and %s' % (1, len(instances)))
             else:
                 choosen_one = 1
+
+            if choosen_one == 0:
+                sys.exit(0)
 
             instance_chosen = instances[choosen_one - 1]
 
@@ -75,7 +84,7 @@ class Cli(object):
 
             ssh_cmd = ssh.contruct_ssh_str(instance_chosen, ssh_user, ssh_port)
 
-            logging.warning('executing %s' % ssh_cmd)
+            logging.info('executing %s' % ssh_cmd)
             os.system(ssh_cmd)
 
         except SergentSshException as e:
