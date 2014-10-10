@@ -45,7 +45,7 @@ class Cli(object):
             tag_ssh_user = config.get(configsection, 'tag_ssh_user')
             tag_ssh_port = config.get(configsection, 'tag_ssh_port')
             key_path = config.get(configsection, 'key_path')
-            using_vpn = config.get(configsection, 'using_vpn')
+            using_vpn = config.getboolean(configsection, 'using_vpn')
         except IOError:
             raise UsageError('%s config file not found' % configfile)
         except ConfigParser.NoSectionError:
