@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+from setuptools import setup
 
 setup(name='Sergent',
       version='1.0',
@@ -9,4 +9,9 @@ setup(name='Sergent',
       author_email='nicolas.baccelli@gmail.com',
       url='',
       packages=['sergent',],
+      scripts=['scripts/sergent'],
+      install_requires=[
+          'boto==2.33',
+          'click==3.3'
+      ],
      )
