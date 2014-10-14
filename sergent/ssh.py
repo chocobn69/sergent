@@ -32,7 +32,7 @@ class SergentSsh(object):
             self._using_vpn = using_vpn
 
         if key_path is not None:
-            self._key_path = key_path
+            self._key_path = os.path.expanduser(key_path)
 
         self._aws_access_key_id = aws_access_key_id
         self._aws_secret_access_key = aws_secret_access_key
@@ -124,5 +124,13 @@ class SergentSsh(object):
             ssh_ip = instance.private_ip_address
         else:
             ssh_ip = instance.ip_address
+
+        # checks if key exists
+        if not os.path.isfile('%s/%s' % (self._key_path, key_name)):
+            # amazon gives us a key with .pem extension, let's check if it exists
+            key_name += '.pem'
+            if not os.path.isfile('%s/%s' % (self._key_path, key_name)):
+                # if not, we raise !
+                raise SergentSshException('key %s/%s not found' % (self._key_path, key_name))
 
         return 'ssh -i %s/%s %s@%s -p %s' % (self._key_path, key_name, ssh_user, ssh_ip, ssh_port)
