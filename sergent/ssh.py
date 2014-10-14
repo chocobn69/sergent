@@ -47,10 +47,13 @@ class SergentSsh(object):
         """
         tags_dict = {}
         for t in tags:
-            splitted_tag = t.split(delimiter)
-            if len(splitted_tag) != 2:
-                raise SergentSshException('invalid tag format %s : must be tag_name=tag_value' % t)
-            tags_dict['tag:' + splitted_tag[0]] = splitted_tag[1]
+            if delimiter in t:
+                splitted_tag = t.split(delimiter)
+                if len(splitted_tag) != 2:
+                    raise SergentSshException('invalid tag format %s : must be tag_name=tag_value' % t)
+                tags_dict['tag:' + splitted_tag[0]] = splitted_tag[1]
+            else:
+                tags_dict['tag-key'] = t
 
         return tags_dict
 
