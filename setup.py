@@ -12,7 +12,6 @@ setup(name='Sergent',
       scripts=['scripts/sergent'],
       install_requires=[
           'boto==2.33',
-          'click==3.3',
-          'ConfigParser'
+          'click==3.3'
       ],
      )
