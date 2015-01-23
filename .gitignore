@@ -60,3 +60,6 @@ bin/
 
 # pycharm
 .idea/
+
+# we don't want to commit logging_dev file
+logging_dev.py

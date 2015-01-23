@@ -3,6 +3,7 @@ import click
 from click import UsageError
 from ssh import SergentSsh, SergentSshException
 import ConfigParser
+from ConfigParser import NoOptionError
 import logging
 import os
 import sys
@@ -23,7 +24,8 @@ class Cli(object):
     @click.option('--configsection', '-s', default='sergent', help='config section in config file for sergent'
                                                                    ' (default sergent)')
     @click.option('--debug/--no-debug', default=False, help='turn on debug (default False)')
-    def go(tags, configfile, configsection, debug):
+    @click.option('--execute', '-e', default=None, help='execute cmd (default, None)')
+    def go(tags, configfile, configsection, debug, execute):
 
         # turn on debug mode (mainly for boto)
         if debug:
@@ -44,7 +46,18 @@ class Cli(object):
 
             tag_ssh_user = config.get(configsection, 'tag_ssh_user')
             tag_ssh_port = config.get(configsection, 'tag_ssh_port')
-            key_path = config.get(configsection, 'key_path')
+            try:
+                key_path = config.get(configsection, 'key_path')
+            except NoOptionError:
+                key_path = None
+            try:
+                s3_key_bucket = config.get(configsection, 's3_key_bucket')
+            except NoOptionError:
+                s3_key_bucket = None
+            try:
+                s3_key_name = config.get(configsection, 's3_key_name')
+            except NoOptionError:
+                s3_key_name = None
             using_vpn = config.getboolean(configsection, 'using_vpn')
         except IOError:
             raise UsageError('%s config file not found' % configfile)
@@ -56,6 +69,8 @@ class Cli(object):
             ssh = SergentSsh(aws_access_key_id,
                              aws_secret_access_key,
                              key_path=key_path,
+                             s3_key_bucket=s3_key_bucket,
+                             s3_key_name=s3_key_name,
                              using_vpn=using_vpn)
             instances = ssh.get_instances_by_tag(tags)
             # if we have more than one instance, we need to make a choice
@@ -83,13 +98,10 @@ class Cli(object):
 
             instance_chosen = instances[choosen_one - 1]
 
-            ssh_user = ssh.get_ssh_user(instance_chosen, tag_name=tag_ssh_user)
-            ssh_port = ssh.get_ssh_user(instance_chosen, tag_name=tag_ssh_port)
-
-            ssh_cmd = ssh.contruct_ssh_str(instance_chosen, ssh_user, ssh_port)
-
-            logging.info('executing %s' % ssh_cmd)
-            os.system(ssh_cmd)
+            return ssh.connect(instance=instance_chosen,
+                               tag_ssh_user=tag_ssh_user,
+                               tag_ssh_port=tag_ssh_port,
+                               cmd=execute)
 
         except SergentSshException as e:
             raise UsageError(e.message)
