@@ -19,7 +19,7 @@ class Cli(object):
     @click.option('--tags', '-t', multiple=True, help='tags where you want to connect to (tagname=value) '
                                                       'separated by spaces')
     @click.option('--configfile', '-c', default=os.getenv('HOME') + '/.sergent', help='config file for sergent '
-                                                                                   '(default ~/.sergent)')
+                                                                                      '(default ~/.sergent)')
     @click.option('--configsection', '-s', default='sergent', help='config section in config file for sergent'
                                                                    ' (default sergent)')
     @click.option('--debug/--no-debug', default=False, help='turn on debug (default False)')

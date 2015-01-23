@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from boto import ec2
+from boto import ec2, s3
 from boto.exception import NoAuthHandlerFound
 import os
 
@@ -15,15 +15,19 @@ class SergentSsh(object):
     _key_path = '.ssh/'
     _aws_access_key_id = None
     _aws_secret_access_key = None
+    _s3_bucket = None
+    _s3_name = None
 
     def __init__(self, aws_access_key_id, aws_secret_access_key,
                  region='us-east-1',
                  using_vpn=False,
-                 key_path=os.getenv('HOME') + '/.ssh/'):
+                 key_path=os.getenv('HOME') + '/.ssh/',
+                 s3_bucket=None,
+                 s3_name=None):
         """
         :param region: region used
         :param using_vpn: boolean determinig if we want to use private (True) or public (False) ip
-        :param key_path: path whis contains ssh key
+        :param key_path: path which contains ssh key (can be s3 key)
         """
         if region is not None:
             self._region = region
@@ -31,11 +35,20 @@ class SergentSsh(object):
         if using_vpn is not None:
             self._using_vpn = using_vpn
 
+        self._aws_access_key_id = aws_access_key_id
+        self._aws_secret_access_key = aws_secret_access_key
+
         if key_path is not None:
             self._key_path = os.path.expanduser(key_path)
 
-        self._aws_access_key_id = aws_access_key_id
-        self._aws_secret_access_key = aws_secret_access_key
+        if s3_bucket is not None and s3_name is not None:
+                self._s3_bucket = s3_bucket
+                self._s3_name = s3_name
+                self.get_s3_key()
+                raise NotImplementedError('s3 not supported yet')
+
+        if key_path is not None and s3_bucket is not None and s3_name is not None:
+            raise SergentSshException('you have too choose between file key and s3 key')
 
     @staticmethod
     def tags_to_dict(tags, delimiter='='):
@@ -56,6 +69,24 @@ class SergentSsh(object):
                 tags_dict['tag-key'] = t
 
         return tags_dict
+
+    def get_s3_key(self):
+        """
+        get ssh key in s3 buckets specified in key_path, prefixed by s3:
+        :return:
+        """
+        try:
+            c = s3.connect_s3(self._region,
+                              aws_access_key_id=self._aws_access_key_id,
+                              aws_secret_access_key=self._aws_secret_access_key)
+            bucket = c.get_bucket(self._s3_bucket)
+            key = bucket.get_key(self._s3_name)
+            return key.get_contents_as_string()
+        except NoAuthHandlerFound:
+            raise SergentSshException('Boto said that you should check your credentials')
+        except s3.S3ResponseError:
+            raise SergentSshException('bucket %s or key %s not found' % (self._s3_bucket, self._s3_name))
+        return None
 
     def get_instances_by_tag(self, tags):
         """
