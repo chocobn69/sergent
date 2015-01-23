@@ -52,3 +52,11 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# virtualenv
+local/
+include/
+bin/
+
+# pycharm
+.idea/
