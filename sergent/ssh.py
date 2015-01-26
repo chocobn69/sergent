@@ -3,10 +3,19 @@
 from boto import ec2, s3
 from boto.exception import NoAuthHandlerFound, S3ResponseError
 import os
+import sys
+import socket
 from paramiko.client import SSHClient, AutoAddPolicy
 from paramiko import RSAKey
+from paramiko.py3compat import u
 from StringIO import StringIO
 import logging
+try:
+    import termios
+    import tty
+    has_termios = True
+except ImportError:
+    has_termios = False
 
 try:
     # on regarde si on a un fichier logging_dev.py qui est hors versionning
@@ -20,6 +29,77 @@ logger = logging.getLogger(__name__)
 
 class SergentSshException(Exception):
     pass
+
+
+# thanks to demo from github paramiko project
+class SergentSShInteractive(object):
+
+    @staticmethod
+    def interactive_shell(chan):
+        if has_termios:
+            SergentSShInteractive.posix_shell(chan)
+        else:
+            SergentSShInteractive.windows_shell(chan)
+
+    @staticmethod
+    def posix_shell(chan):
+        import select
+
+        oldtty = termios.tcgetattr(sys.stdin)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            tty.setcbreak(sys.stdin.fileno())
+            chan.settimeout(0.0)
+
+            while True:
+                r, w, e = select.select([chan, sys.stdin], [], [])
+                if chan in r:
+                    try:
+                        x = u(chan.recv(1024))
+                        if len(x) == 0:
+                            sys.stdout.write('\r\n*** EOF\r\n')
+                            break
+                        sys.stdout.write(x)
+                        sys.stdout.flush()
+                    except socket.timeout:
+                        pass
+                if sys.stdin in r:
+                    x = sys.stdin.read(1)
+                    if len(x) == 0:
+                        break
+                    chan.send(x)
+
+        finally:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, oldtty)
+
+    @staticmethod
+    def windows_shell(chan):
+        import threading
+
+        sys.stdout.write("Line-buffered terminal emulation. Press F6 or ^Z to send EOF.\r\n\r\n")
+
+        def writeall(sock):
+            while True:
+                data = sock.recv(256)
+                if not data:
+                    sys.stdout.write('\r\n*** EOF ***\r\n\r\n')
+                    sys.stdout.flush()
+                    break
+                sys.stdout.write(data)
+                sys.stdout.flush()
+
+        writer = threading.Thread(target=writeall, args=(chan,))
+        writer.start()
+
+        try:
+            while True:
+                d = sys.stdin.read(1)
+                if not d:
+                    break
+                chan.send(d)
+        except EOFError:
+            # user hit ^Z or F6
+            pass
 
 
 class SergentSsh(object):
@@ -194,9 +274,8 @@ class SergentSsh(object):
         client.connect(hostname=ssh_ip, port=ssh_port, username=ssh_user, pkey=mykey)
 
         if cmd is None:
-            client.invoke_shell()
+            SergentSShInteractive.interactive_shell(client.invoke_shell())
         else:
             stdin, stdout, stderr = client.exec_command(command=cmd)
-
-        print stdout.read()
-        print stderr.read()
+            print stdout.read()
+            print stderr.read()
