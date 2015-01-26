@@ -22,6 +22,16 @@ dictconfig = {
         },
     },
     'loggers': {
+        'paramiko': {
+            'handlers': ['default'],
+            'level': 'ERROR',
+            'propagate': True
+        },
+        'boto': {
+            'handlers': ['default'],
+            'level': 'ERROR',
+            'propagate': True
+        },
         '': {
             'handlers': ['default'],
             'level': 'ERROR',
