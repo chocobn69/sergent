@@ -8,8 +8,10 @@ import socket
 from paramiko.client import SSHClient, AutoAddPolicy
 from paramiko import RSAKey
 from paramiko.py3compat import u
+from tempfile import NamedTemporaryFile
 from StringIO import StringIO
 import logging
+
 try:
     import termios
     import tty
@@ -19,11 +21,11 @@ except ImportError:
 
 try:
     # on regarde si on a un fichier logging_dev.py qui est hors versionning
-    from logging_dev import dictconfig
+    from logging_dev import LogConfig
 except ImportError:
-    from logging_prod import dictconfig
+    from logging_prod import LogConfig
 
-logging.config.dictConfig(dictconfig)
+logging.config.dictConfig(LogConfig.dictconfig)
 logger = logging.getLogger(__name__)
 
 
@@ -114,12 +116,16 @@ class SergentSsh(object):
                  using_vpn=False,
                  key_path=os.getenv('HOME') + '/.ssh/',
                  s3_key_bucket=None,
-                 s3_key_name=None):
+                 s3_key_name=None,
+                 log_level=None):
         """
         :param region: region used
         :param using_vpn: boolean determinig if we want to use private (True) or public (False) ip
         :param key_path: path which contains ssh key (can be s3 key)
         """
+        if log_level is not None:
+            logger.setLevel(log_level)
+            logging.basicConfig(level=log_level)
         if region is not None:
             self._region = region
 
@@ -274,7 +280,12 @@ class SergentSsh(object):
         client.connect(hostname=ssh_ip, port=ssh_port, username=ssh_user, pkey=mykey)
 
         if cmd is None:
-            SergentSShInteractive.interactive_shell(client.invoke_shell())
+            with NamedTemporaryFile() as tmp_key_file:
+                mykey.write_private_key(tmp_key_file, password=None)
+                tmp_key_file.flush()
+                cmd = 'ssh -i %s %s@%s -p %s' % (tmp_key_file.name, ssh_user, ssh_ip, ssh_port)
+                logger.debug(cmd)
+                os.system(cmd)
         else:
             stdin, stdout, stderr = client.exec_command(command=cmd)
             print stdout.read()

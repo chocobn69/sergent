@@ -8,6 +8,15 @@ import logging
 import os
 import sys
 
+try:
+    # on regarde si on a un fichier logging_dev.py qui est hors versionning
+    from logging_dev import LogConfig
+except ImportError:
+    from logging_prod import LogConfig
+
+logging.config.dictConfig(LogConfig.dictconfig)
+logger = logging.getLogger(__name__)
+
 
 class SergentCliException(Exception):
     pass
@@ -28,8 +37,12 @@ class Cli(object):
     def go(tags, configfile, configsection, debug, execute):
 
         # turn on debug mode (mainly for boto)
-        if debug:
+        if debug is True:
             logging.basicConfig(level=logging.DEBUG)
+            logger.setLevel(logging.DEBUG)
+        else:
+            logging.basicConfig(level=logging.ERROR)
+            logger.setLevel(logging.ERROR)
 
         # we need the config file
         try:
@@ -71,7 +84,8 @@ class Cli(object):
                              key_path=key_path,
                              s3_key_bucket=s3_key_bucket,
                              s3_key_name=s3_key_name,
-                             using_vpn=using_vpn)
+                             using_vpn=using_vpn,
+                             log_level=logger.getEffectiveLevel())
             instances = ssh.get_instances_by_tag(tags)
             # if we have more than one instance, we need to make a choice
             if len(instances) > 1:
