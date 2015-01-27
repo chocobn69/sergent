@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import click
 from click import UsageError
-from ssh import SergentSsh, SergentSshException
+from .ssh import SergentSsh, SergentSshException
 import ConfigParser
 from ConfigParser import NoOptionError
 import logging
