@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+from __future__ import (absolute_import, print_function)
 from boto import ec2, s3
 from boto.exception import NoAuthHandlerFound, S3ResponseError
 import os
@@ -9,7 +9,7 @@ from paramiko.client import SSHClient, AutoAddPolicy
 from paramiko import RSAKey
 from paramiko.py3compat import u
 from tempfile import NamedTemporaryFile
-from StringIO import StringIO
+from io import StringIO
 import logging
 
 try:
@@ -21,9 +21,9 @@ except ImportError:
 
 try:
     # on regarde si on a un fichier logging_dev.py qui est hors versionning
-    from logging_dev import LogConfig
+    from .logging_dev import LogConfig
 except ImportError:
-    from logging_prod import LogConfig
+    from .logging_prod import LogConfig
 
 logging.config.dictConfig(LogConfig.dictconfig)
 logger = logging.getLogger(__name__)
@@ -181,8 +181,7 @@ class SergentSsh(object):
                                      aws_secret_access_key=self._aws_secret_access_key)
             bucket = c.get_bucket(self._s3_bucket)
             key = bucket.get_key(self._s3_name)
-            self._key_file = StringIO()
-            self._key_file.write(key.get_contents_as_string())
+            self._key_file = StringIO(str(key.get_contents_as_string().decode()))
             self._key_file.seek(0)
             key.close()
         except NoAuthHandlerFound:
@@ -274,13 +273,12 @@ class SergentSsh(object):
         client.set_missing_host_key_policy(AutoAddPolicy())
 
         logger.debug('connecting to %s with port %s and user %s', ssh_ip, ssh_port, ssh_user)
-
         mykey = RSAKey.from_private_key(self._key_file)
 
         client.connect(hostname=ssh_ip, port=ssh_port, username=ssh_user, pkey=mykey)
 
         if cmd is None:
-            with NamedTemporaryFile() as tmp_key_file:
+            with NamedTemporaryFile(mode='w+') as tmp_key_file:
                 mykey.write_private_key(tmp_key_file, password=None)
                 tmp_key_file.flush()
                 cmd = 'ssh -i %s %s@%s -p %s' % (tmp_key_file.name, ssh_user, ssh_ip, ssh_port)
@@ -288,5 +286,5 @@ class SergentSsh(object):
                 os.system(cmd)
         else:
             stdin, stdout, stderr = client.exec_command(command=cmd)
-            print stdout.read()
-            print stderr.read()
+            print(stdout.read())
+            print(stderr.read())

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # main sergent cli
-#
 import sys
 from sergent.cli import Cli
 

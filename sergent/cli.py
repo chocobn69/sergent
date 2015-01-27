@@ -1,18 +1,24 @@
 #!/usr/bin/env python
+from __future__ import (absolute_import, print_function)
 import click
 from click import UsageError
 from .ssh import SergentSsh, SergentSshException
-import ConfigParser
-from ConfigParser import NoOptionError
+
+try:
+    import configparser
+    from configparser import NoOptionError
+except ImportError:
+    import ConfigParser as configparser
+    from ConfigParser import NoOptionError
 import logging
 import os
 import sys
 
 try:
     # on regarde si on a un fichier logging_dev.py qui est hors versionning
-    from logging_dev import LogConfig
+    from .logging_dev import LogConfig
 except ImportError:
-    from logging_prod import LogConfig
+    from .logging_prod import LogConfig
 
 logging.config.dictConfig(LogConfig.dictconfig)
 logger = logging.getLogger(__name__)
@@ -46,7 +52,7 @@ class Cli(object):
 
         # we need the config file
         try:
-            config = ConfigParser.ConfigParser()
+            config = configparser.ConfigParser()
             config.readfp(open(configfile))
 
             aws_access_key_id = config.get(configsection, 'aws_access_key_id')
@@ -74,7 +80,7 @@ class Cli(object):
             using_vpn = config.getboolean(configsection, 'using_vpn')
         except IOError:
             raise UsageError('%s config file not found' % configfile)
-        except ConfigParser.NoSectionError:
+        except configparser.NoSectionError:
             raise UsageError('section %s not found in config file %s' % (configsection, configfile))
 
         # now we can try to connect
