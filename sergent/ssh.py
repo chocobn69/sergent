@@ -136,8 +136,7 @@ class SergentSsh(object):
         self._aws_secret_access_key = aws_secret_access_key
 
         if key_path is not None:
-            self._key_file = StringIO()
-            self._key_file.open(os.path.expanduser(key_path))
+            self._key_file = open(os.path.expanduser(key_path), 'r')
 
         if s3_key_bucket is not None and s3_key_name is not None:
             self._s3_bucket = s3_key_bucket
