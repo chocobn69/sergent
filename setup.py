@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name='Sergent',
-      version='1.2.9',
+      version='1.2.10',
       license='GNU',
       description='Python Ssh to AWS EC2 helper',
       author='Nicolas Baccelli',
