@@ -180,7 +180,7 @@ class SergentSsh(object):
                                      aws_secret_access_key=self._aws_secret_access_key)
             bucket = c.get_bucket(self._s3_bucket)
             key = bucket.get_key(self._s3_name)
-            self._key_file = StringIO(str(key.get_contents_as_string().decode()))
+            self._key_file = StringIO(unicode(key.get_contents_as_string().decode()))
             self._key_file.seek(0)
             key.close()
         except NoAuthHandlerFound:
@@ -200,7 +200,7 @@ class SergentSsh(object):
                                       aws_access_key_id=self._aws_access_key_id,
                                       aws_secret_access_key=self._aws_secret_access_key)
 
-            #select instance by list of tags (OR used)
+            # select instance by list of tags (OR used)
             reservations = c.get_all_reservations(filters=SergentSsh.tags_to_dict(tags))
             instances = list()
 
@@ -285,5 +285,9 @@ class SergentSsh(object):
                 os.system(cmd)
         else:
             stdin, stdout, stderr = client.exec_command(command=cmd)
-            print(stdout.read())
-            print(stderr.read())
+            out_str = stdout.read()
+            out_err = stderr.read().strip(' \t\n\r')
+            print(out_str)
+            if out_err != '':
+                print(out_err)
+                sys.exit(1)
